@@ -40,4 +40,29 @@ process combine {
 
 combine_ch.println() 
 
-
+workflow.onComplete {
+    def msg = """\
+    Pipeline execution summary
+    ---------------------------
+    Completed at: ${workflow.complete}
+    Duration    : ${workflow.duration}
+    Success     : ${workflow.success}
+    workDir     : ${workflow.workDir}
+    exit status : ${workflow.exitStatus}
+    """.stripIndent()
+ 
+    sendMail(from: 'lich@gis.a-star.edu.sg', to: 'lich@gis.a-star.edu.sg', subject: 'Nextflow execution completed', body: msg)
+    file('work').deleteDir()
+}
+workflow.onError {
+    def msg = """\
+    Pipeline execution summary
+    ---------------------------
+    Failed at   : ${workflow.complete}
+    Duration    : ${workflow.duration}
+    Success     : ${workflow.success}
+    workDir     : ${workflow.workDir}
+    exit status : ${workflow.exitStatus}
+    """.stripIndent()
+    sendMail(from: 'lich@gis.a-star.edu.sg', to: 'lich@gis.a-star.edu.sg', subject: 'Nextflow execution failed', body: msg)
+}
