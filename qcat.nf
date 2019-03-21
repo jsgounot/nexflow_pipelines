@@ -6,24 +6,34 @@ params.lib = params.path.split("/").last().split("_")[0];
 reads = Channel.fromPath(params.path + "/*fastq.gz")
 
 
-process porechop {
-
+process qcat {
     input:
     file x from reads;
     output:
-    file 'porechop/*' into porechop_res
+    file 'qcat/*' into qcat_res
     
     """
-    /mnt/software/unstowable/anaconda/envs/nanopore_py3/bin/porechop -i $x --format fastq.gz -v 0 -b porechop
+    zcat $x | /mnt/software/unstowable/anaconda/envs/nanopore_py3/bin/qcat -b qcat
     """    
 }
 
-porechop_res
-    .flatten()
-    .map { file -> tuple( file.name.substring(0,4), file ) }
+
+process compress_fastq {
+    input:
+    file fq from qcat_res.flatten()
+    output:
+    file "${fq}.gz" into qcat_compress_res
+
+    """
+    gzip -c ${fq} > ${fq}.gz
+    """
+}
+
+
+qcat_compress_res
+    .map { file -> tuple( file.name.split("\\.")[0], file ) }
     .groupTuple()
     .set { groupped_by_barcode}
-
 
 process combine {
   executor 'local'
