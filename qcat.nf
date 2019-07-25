@@ -1,56 +1,100 @@
 #!/usr/bin/env nextflow
 
-params.path = './'
-params.lib = params.path.split("/").last().split("_")[0];
+params.help = false
+params.path = false
+params.min_score = 60
+params.qcat_path = '/mnt/software/unstowable/miniconda3-4.6.14/envs/qcat-1.1.0/bin/qcat'
 
-reads = Channel.fromPath(params.path + "/*fastq.gz")
+def helpMessage() {
+  // adapted from nf-core
+  //  log.info nfcoreHeader()
+    log.info"""
+    =========================================================================================================================================
+    Usage:
+    The typical command for running the pipeline is as follows:
+      nextflow run qcat.nf  --path PATH_TO_READS
+    Mandatory arguments:
+      --path                        Path to a folder containing all input fastq files (this will be recursively searched for *fastq.gz files)
+    Parameters for qcat:
+      --min_score                   Minimum barcode score. Barcode calls with a lower score will be discarded. Must be between 0 and 100. (default: 60)
+      --qcat_path                   The path for qcat executable (This will be fixed after nextflow 19.07. See: https://github.com/nextflow-io/nextflow/issues/1195)
+    AWSBatch:
+      ==== Under construction ====
+      --awsqueue                    The AWSBatch JobQueue that needs to be set when running on AWSBatch
+      --awsregion                   The AWS Region for your AWS Batch job to run on
+    =========================================================================================================================================
+    """.stripIndent()
+}
+if (params.help){
+    helpMessage()
+    exit 0
+}
+if (!params.path){
+   helpMessage()
+   log.info"""
+   [Error] --path is required
+   """.stripIndent()
+   exit 0
+}
 
+params.lib = params.path.split("/")[4].split("_")[0]
+
+
+ch_reads = Channel.fromPath(params.path + "*fastq.gz")
 
 process qcat {
+    tag "$x"
+    label 'process_lowCPU_highRAM'        
+    //conda '/mnt/software/unstowable/miniconda3-4.6.14/envs/qcat-1.1.0/'
+    
     input:
-    file x from reads;
+    file x from ch_reads;
     output:
-    file 'qcat/*' into qcat_res
+    file 'qcat/*' into ch_qcat_res 
     
     """
-    zcat $x | /mnt/software/unstowable/anaconda/envs/nanopore_py3/bin/qcat -b qcat
+    zcat $x | ${params.qcat_path} -b qcat --trim --min-score ${params.min_score} -t $task.cpus
     """    
 }
 
 
 process compress_fastq {
+    tag "$fq"
+    label 'process_low'
+    
     input:
-    file fq from qcat_res.flatten()
+    file fq from ch_qcat_res.flatten()
     output:
-    file "${fq}.gz" into qcat_compress_res
+    file "${fq}.gz" into ch_qcat_compress_res
 
     """
     gzip -c ${fq} > ${fq}.gz
     """
 }
 
-
-qcat_compress_res
+ch_qcat_compress_res
     .map { file -> tuple( file.name.split("\\.")[0], file ) }
     .groupTuple()
-    .set { groupped_by_barcode}
+    .set { ch_groupped_by_barcode}
 
 process combine {
-  executor 'local'
-  publishDir params.lib, mode: 'move'
-  
-  input:
-  set barcode, file("${barcode}.fastq.gz") from groupped_by_barcode  
-  output: 
-  set barcode, file("${params.lib}_${barcode}/${params.lib}_${barcode}.fastq.gz") into combine_ch
+    tag "$file"
+    label 'process_low'
 
-  """
-  mkdir ${params.lib}_${barcode}
-  cat *.fastq.gz* > ${params.lib}_${barcode}/${params.lib}_${barcode}.fastq.gz
-  """
+    publishDir params.lib, mode: 'move'
+  
+    input:
+    set barcode, file("${barcode}.fastq.gz") from ch_groupped_by_barcode  
+    output: 
+    set barcode, file("${params.lib}_${barcode}/${params.lib}_${barcode}.fastq.gz") into ch_combine
+
+    """
+    mkdir ${params.lib}_${barcode}
+    cat *.fastq.gz* > ${params.lib}_${barcode}/${params.lib}_${barcode}.fastq.gz
+    """
 } 
 
-combine_ch.println() 
+ch_combine.println() 
 
 
 workflow.onComplete {
