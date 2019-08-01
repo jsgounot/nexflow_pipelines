@@ -2,9 +2,9 @@
 
 ## Requirements:
 
- - nextflow (19.04)
+ - [nextflow](https://www.nextflow.io/) (19.04) 
  - JAVA >= 1.8 (Add this to your .bashrc: `export NXF_JAVA_HOME=/etc/alternatives/java_sdk_1.8.0/`)
- - setup S3 credentials (the configuration for gis-nanopore-archive has to be your default profile, see (here)[https://www.nextflow.io/docs/latest/amazons3.html])
+ - For demultiplexing from S3: setup S3 credentials (the configuration for gis-nanopore-archive has to be your default profile, see [here](https://www.nextflow.io/docs/latest/amazons3.html)
 
 To run the qcat pipeline:
 ```
