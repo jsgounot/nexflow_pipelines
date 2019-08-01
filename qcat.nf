@@ -2,6 +2,7 @@
 
 params.help = false
 params.path = false
+params.lib  = false
 params.min_score = 60
 params.qcat_path = '/mnt/software/unstowable/miniconda3-4.6.14/envs/qcat-1.1.0/bin/qcat'
 
@@ -15,6 +16,8 @@ def helpMessage() {
       nextflow run qcat.nf  --path PATH_TO_READS
     Mandatory arguments:
       --path                        Path to a folder containing all input fastq files (this will be recursively searched for *fastq.gz files)
+    Optional arguments:
+      --lib                         Libary prefix after demux (default: Automatically detected from the file name NXXX_FLO-XXX_SQK-XXX ==> NXXX)
     Parameters for qcat:
       --min_score                   Minimum barcode score. Barcode calls with a lower score will be discarded. Must be between 0 and 100. (default: 60)
       --qcat_path                   The path for qcat executable (This will be fixed after nextflow 19.07. See: https://github.com/nextflow-io/nextflow/issues/1195)
@@ -37,8 +40,17 @@ if (!params.path){
    exit 0
 }
 
-params.lib = params.path.split("/")[4].split("_")[0]
-
+if (!params.lib){
+    try{
+	params.lib = (params.path =~ /N[0-9]+_[A-Z0-9\-]+_[A-Z0-9\-]+/)[0].split("_")[0]
+    } catch(Exception ex) {
+        log.info"""
+        [Error] Cannot detect the required pattern NXXX_{FLOWCELL-ID}_{KIT-ID}. Please specify output prefix using --lib.
+        """
+        exit 0
+    }
+   //params.path.split("/")[4].split("_")[0]
+}
 
 ch_reads = Channel.fromPath(params.path + "*fastq.gz")
 
