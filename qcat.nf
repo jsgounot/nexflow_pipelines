@@ -120,7 +120,7 @@ workflow.onComplete {
     exit status : ${workflow.exitStatus}
     """.stripIndent()
  
-    sendMail(from: 'lich@gis.a-star.edu.sg', to: 'lich@gis.a-star.edu.sg', subject: 'Nextflow execution completed', body: msg)
+    //sendMail(from: 'lich@gis.a-star.edu.sg', to: 'lich@gis.a-star.edu.sg', subject: 'Nextflow execution completed', body: msg)
     file('work').deleteDir()
 }
 workflow.onError {
@@ -133,5 +133,5 @@ workflow.onError {
     workDir     : ${workflow.workDir}
     exit status : ${workflow.exitStatus}
     """.stripIndent()
-    sendMail(from: 'lich@gis.a-star.edu.sg', to: 'lich@gis.a-star.edu.sg', subject: 'Nextflow execution failed', body: msg)
+    //sendMail(from: 'lich@gis.a-star.edu.sg', to: 'lich@gis.a-star.edu.sg', subject: 'Nextflow execution failed', body: msg)
 }
