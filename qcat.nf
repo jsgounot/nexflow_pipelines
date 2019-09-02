@@ -2,9 +2,9 @@
 
 params.help = false
 params.path = false
-params.lib  = false
 params.min_score = 60
 params.qcat_path = '/mnt/software/unstowable/miniconda3-4.6.14/envs/qcat-1.1.0/bin/qcat'
+params.lib = false
 
 def helpMessage() {
   // adapted from nf-core
@@ -40,17 +40,18 @@ if (!params.path){
    exit 0
 }
 
-if (!params.lib){
+lib = params.lib
+if (!lib){
     try{
-	params.lib = (params.path =~ /N[0-9]+_[A-Z0-9\-]+_[A-Z0-9\-]+/)[0].split("_")[0]
+	lib = (params.path =~ /N[0-9]+_[A-Z0-9\-]+_[A-Z0-9\-]+/)[0].split("_")[0]
     } catch(Exception ex) {
         log.info"""
         [Error] Cannot detect the required pattern NXXX_{FLOWCELL-ID}_{KIT-ID}. Please specify output prefix using --lib.
         """
         exit 0
     }
-   //params.path.split("/")[4].split("_")[0]
 }
+
 
 ch_reads = Channel.fromPath(params.path + "*fastq.gz")
 
@@ -93,16 +94,16 @@ process combine {
     tag "$file"
     label 'process_low'
 
-    publishDir params.lib, mode: 'move'
+    publishDir lib, mode: 'move'
   
     input:
     set barcode, file("${barcode}.fastq.gz") from ch_groupped_by_barcode  
     output: 
-    set barcode, file("${params.lib}_${barcode}/${params.lib}_${barcode}.fastq.gz") into ch_combine
+    set barcode, file("${lib}_${barcode}/${lib}_${barcode}.fastq.gz") into ch_combine
 
     """
-    mkdir ${params.lib}_${barcode}
-    cat *.fastq.gz* > ${params.lib}_${barcode}/${params.lib}_${barcode}.fastq.gz
+    mkdir ${lib}_${barcode}
+    cat *.fastq.gz* > ${lib}_${barcode}/${lib}_${barcode}.fastq.gz
     """
 } 
 
