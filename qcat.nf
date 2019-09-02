@@ -5,6 +5,7 @@ params.path = false
 params.min_score = 60
 params.qcat_path = '/mnt/software/unstowable/miniconda3-4.6.14/envs/qcat-1.1.0/bin/qcat'
 params.lib = false
+params.sendMail = true
 
 def helpMessage() {
   // adapted from nf-core
@@ -21,6 +22,8 @@ def helpMessage() {
     Parameters for qcat:
       --min_score                   Minimum barcode score. Barcode calls with a lower score will be discarded. Must be between 0 and 100. (default: 60)
       --qcat_path                   The path for qcat executable (This will be fixed after nextflow 19.07. See: https://github.com/nextflow-io/nextflow/issues/1195)
+    Pipeline:
+      --sendMail                    Send email on workflow complete/error. (default: true)
     AWSBatch:
       ==== Under construction ====
       --awsqueue                    The AWSBatch JobQueue that needs to be set when running on AWSBatch
@@ -110,6 +113,9 @@ process combine {
 ch_combine.println() 
 
 
+sender = workflow.userName + '@gis.a-star.edu.sg'
+receiver = workflow.userName + '@gis.a-star.edu.sg'
+
 workflow.onComplete {
     def msg = """\
     Pipeline execution summary
@@ -120,9 +126,10 @@ workflow.onComplete {
     workDir     : ${workflow.workDir}
     exit status : ${workflow.exitStatus}
     """.stripIndent()
- 
-    //sendMail(from: 'lich@gis.a-star.edu.sg', to: 'lich@gis.a-star.edu.sg', subject: 'Nextflow execution completed', body: msg)
-    file('work').deleteDir()
+    if (params.sendMail) { 
+        sendMail(from: sender, to: receiver, subject: 'Nextflow execution completed', body: msg)
+    }
+    //file('work').deleteDir()
 }
 workflow.onError {
     def msg = """\
@@ -134,5 +141,8 @@ workflow.onError {
     workDir     : ${workflow.workDir}
     exit status : ${workflow.exitStatus}
     """.stripIndent()
-    //sendMail(from: 'lich@gis.a-star.edu.sg', to: 'lich@gis.a-star.edu.sg', subject: 'Nextflow execution failed', body: msg)
+
+    if (params.sendMail){
+        sendMail(from: sender, to: receiver, subject: 'Nextflow execution failed', body: msg)
+    }
 }
