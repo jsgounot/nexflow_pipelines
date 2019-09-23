@@ -56,7 +56,7 @@ if (!lib){
 }
 
 
-ch_reads = Channel.fromPath(params.path + "*fastq.gz")
+ch_reads = Channel.fromPath(params.path + "**fastq.gz")
 
 process qcat {
     tag "$x"
